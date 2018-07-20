@@ -3,7 +3,6 @@
 %defines
 %no-lines
 %verbose
-%glr-parser
 
 // definitions
 %define api.pure true
