@@ -1,0 +1,7 @@
+Debug/
+Release/
+calc
+*.lex.*
+*.parse.*
+*.vcxproj
+*.vcxproj.*
