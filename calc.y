@@ -77,7 +77,7 @@ void yyerror (YYLTYPE *yylloc, void *yyscanner, char const *msg);
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <malloc.h>
+//#include <malloc.h>
 
 #define YYDEBUG 0
 #define YYPOLLUTE_NAMESPACE
@@ -99,6 +99,8 @@ struct node *make_node(void *yyscanner, const char *op, struct node *left, struc
 void free_ast(void *yyscanner, struct node *ast);
 
 double eval_ast(struct node *ast, size_t level);
+
+void print_graphviz(struct node *ast);
 
 /*
  * little cheat sheet:
@@ -245,6 +247,7 @@ identifier: T_IDENTIFIER { $$ = $1; };
 line: T_NEWLINE { YYACCEPT; }
 | expr T_NEWLINE {
 	printf("\t[expr: %.16g]\n", eval_ast($1, 0));
+  print_graphviz($1);
 	free_ast(yyscanner, $1);
 	YYACCEPT;
 }

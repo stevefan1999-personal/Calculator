@@ -7,7 +7,7 @@ calc.lex.c: calc.l
 	flex calc.l
 
 calc: calc.lex.c calc.parse.c
-	gcc -w -o calc calc.c calc.lex.c calc.parse.c -lm
+	gcc -Os -w -o calc calc.c calc.lex.c calc.parse.c -lm
 
 all: clean calc
 

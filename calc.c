@@ -195,6 +195,8 @@ void eval_function_list(struct node *args, size_t level, kvec_t(double) *stack) 
     }
 }
 
+void print_graphviz(struct node *ast);
+
 double eval_ast(struct node *ast, size_t level) {
 #if AST_DEBUG
     if (ast->right == NULL) {
@@ -284,6 +286,81 @@ double eval_ast(struct node *ast, size_t level) {
     }
 
     return NAN;
+}
+
+typedef enum {
+  PRE,
+  IN,
+  POST
+} order_t;
+
+void print_dot(struct node *ast, int node, int parent, order_t order) {
+#define HANDLE(ast, name) if (streql((ast)->op, name))
+    if (ast->right == NULL) {
+#define GENERATE_TRANSFORMER_UNARY(ast, name) \
+  HANDLE(ast, #name) { \
+    if (order == PRE) { \
+      printf(" %i [label=\"%s\"];\n", node, #name); \
+      printf(" %i -> %i;\n", parent, node); \
+    } \
+    print_dot(ast->left, 2*node, node, order); \
+    if (order == POST) { \
+      printf(" %i [label=\"%s\"];\n", node, #name); \
+      printf(" %i -> %i;\n", parent, node); \
+    } \
+  }
+        GENERATE_TRANSFORMER_UNARY(ast, +);
+        GENERATE_TRANSFORMER_UNARY(ast, -);
+
+        HANDLE(ast, "number") {
+          printf(" %i [label=\"%g\"];\n", node, *(double *)ast->left);
+          printf(" %i -> %i;\n", parent, node);
+        }
+        HANDLE(ast, "identifier") {
+          printf(" %i [label=\"%s\"];\n", node, (const char *) ast->left);
+          printf(" %i -> %i;\n", parent, node);
+        }
+
+    } else {
+#define GENERATE_TRANSFORMER_BINARY(ast, name) \
+		HANDLE(ast, #name) { \
+      if (order == PRE) { \
+        printf(" %i [label=\"%s\"];\n", node, #name); \
+        printf(" %i -> %i;\n", parent, node); \
+      } \
+      if (ast->left) { \
+        print_dot(ast->left, 2*node, node, order); \
+      } \
+      if (order == IN) { \
+        printf(" %i [label=\"%s\"];\n", node, #name); \
+        printf(" %i -> %i;\n", parent, node); \
+      } \
+      if (ast->right) { \
+        print_dot(ast->right, 2*node+1, node, order); \
+      } \
+      if (order == POST) { \
+        printf(" %i [label=\"%s\"];\n", node, #name); \
+        printf(" %i -> %i;\n", parent, node); \
+      } \
+		} do; while(0)
+
+        GENERATE_TRANSFORMER_BINARY(ast, +);
+        GENERATE_TRANSFORMER_BINARY(ast, -);
+        GENERATE_TRANSFORMER_BINARY(ast, *);
+        GENERATE_TRANSFORMER_BINARY(ast, /);
+        GENERATE_TRANSFORMER_BINARY(ast, >);
+        GENERATE_TRANSFORMER_BINARY(ast, <);
+        GENERATE_TRANSFORMER_BINARY(ast, &&);
+        GENERATE_TRANSFORMER_BINARY(ast, ||);
+    }
+}
+
+void print_graphviz(struct node *ast) {
+  printf("digraph tree {\n");
+  printf(" rank=same;\n");
+  printf(" node [fontname=\"Arial\", shape=\"circle\"];\n");
+  print_dot(ast, 1, 0, IN);
+  printf("}\n");
 }
 
 int main(void) {
