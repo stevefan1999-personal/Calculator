@@ -66,6 +66,7 @@ typedef struct node {
 	const char *op;
 	struct node *left;
 	struct node *right;
+	void *yyscanner;
 } node;
 
 #define YIELD(x) return YYPREFIX_TOKEN(x)
@@ -92,15 +93,12 @@ void yyerror (YYLTYPE *yylloc, void *yyscanner, char const *msg);
 # undef YYSTACK_ALLOC
 #endif
 
-// #define YYMALLOC(size) yyalloc(size, yyscanner)
-// #define YYFREE(ptr) yyfree(ptr, yyscanner)
+#define YYMALLOC(size) yyalloc(size, yyscanner)
+#define YYFREE(ptr) yyfree(ptr, yyscanner)
 
 struct node *make_node(void *yyscanner, const char *op, struct node *left, struct node *right);
-void free_ast(void *yyscanner, struct node *ast);
-
-double eval_ast(struct node *ast, size_t level);
-
-void print_graphviz(struct node *ast);
+double calc_eval_ast(struct node *ast, size_t level);
+void calc_halt(void *yyscanner);
 
 /*
  * little cheat sheet:
@@ -228,13 +226,7 @@ int yydebug = 1;
 	factorial_expr
 ;
 
-%printer { fprintf (yyoutput, "'%c'", $$); } <character>
-
-%destructor {
-	if ($$ != NULL) {
-		free_ast(yyscanner, $$);
-	}
-} <node>;
+%printer { fprintf (yyoutput, "'%c'", $$); } <character>;
 
 %start line
 
@@ -246,14 +238,12 @@ identifier: T_IDENTIFIER { $$ = $1; };
 
 line: T_NEWLINE { YYACCEPT; }
 | expr T_NEWLINE {
-	printf("\t[expr: %.16g]\n", eval_ast($1, 0));
-  print_graphviz($1);
-	free_ast(yyscanner, $1);
+	printf("\t[expr: %.16g]\n", calc_eval_ast($1, 0));
 	YYACCEPT;
 }
 |	T_QUIT T_NEWLINE {
 	printf("bye!\n");
-	yy_set_extra((void *)1, yyscanner);
+	calc_halt(yyscanner);
 	YYACCEPT;
 }
 ;
