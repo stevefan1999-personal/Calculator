@@ -22,18 +22,15 @@
 static tgc_t gc;
 
 void *calc_alloc(size_t bytes, void *yyscanner) {
-    printf("calc_alloc: %p", yyscanner);
-    return tgc_alloc(calc_get_extra(yyscanner), bytes);
+    return yyscanner ? tgc_alloc(calc_get_extra(yyscanner), bytes) : malloc(bytes);
 }
 
 void *calc_realloc(void *ptr, size_t bytes, void *yyscanner) {
-    printf("calc_realloc: %p", yyscanner);
-    return tgc_realloc(calc_get_extra(yyscanner), ptr, bytes);
+    return yyscanner ? tgc_realloc(calc_get_extra(yyscanner), ptr, bytes) : realloc(ptr, bytes);
 }
 
 void calc_free(void *ptr, void *yyscanner) {
-    printf("calc_free: %p", yyscanner);
-    tgc_free(calc_get_extra(yyscanner), ptr);
+    yyscanner ? tgc_free(calc_get_extra(yyscanner), ptr) : free(ptr);
 }
 
 double get_var(const char *name);
