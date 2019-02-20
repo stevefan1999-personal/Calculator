@@ -8,7 +8,6 @@
 %option yylineno
 %option noline
 
-
 %{
 #define YYPOLLUTE_NAMESPACE
 #include "calc.parse.h"
@@ -96,17 +95,13 @@ IDENTIFIER [_a-zA-Z][_a-zA-Z0-9]*
 }
 %%
 
-#if 0
+#if 1
+
 // CONTROL ALL THE MEMORY
-void *yyalloc(size_t bytes, void *scanner) {
-    return malloc(bytes);
-}
+void *yyalloc(size_t bytes, void *scanner);
 
-void *yyrealloc(void *ptr, size_t bytes, void *scanner) {
-    return realloc(ptr, bytes);
-}
+void *yyrealloc(void *ptr, size_t bytes, void *scanner);
 
-void yyfree(void *ptr, void *scanner) {
-    free(ptr);
-}
+void yyfree(void *ptr, void *scanner);
+
 #endif

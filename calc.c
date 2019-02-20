@@ -3,6 +3,7 @@
 #include <float.h>
 #include "klib/khash.h"
 #include "klib/kvec.h"
+#include "tgc/tgc.h"
 
 #define YYPOLLUTE_NAMESPACE
 #include "calc.parse.h"
@@ -18,16 +19,21 @@
 
 #define AST_DEBUG 1
 
+static tgc_t gc;
+
 void *calc_alloc(size_t bytes, void *yyscanner) {
-    return malloc(bytes);
+    printf("calc_alloc: %p", yyscanner);
+    return tgc_alloc(calc_get_extra(yyscanner), bytes);
 }
 
 void *calc_realloc(void *ptr, size_t bytes, void *yyscanner) {
-    return realloc(ptr, bytes);
+    printf("calc_realloc: %p", yyscanner);
+    return tgc_realloc(calc_get_extra(yyscanner), ptr, bytes);
 }
 
 void calc_free(void *ptr, void *yyscanner) {
-    free(ptr);
+    printf("calc_free: %p", yyscanner);
+    tgc_free(calc_get_extra(yyscanner), ptr);
 }
 
 double get_var(const char *name);
@@ -117,7 +123,7 @@ int get_function_idx(const char *op) {
 }
 
 struct node *make_node(void *yyscanner, const char *op, struct node *left, struct node *right) {
-    struct node *ast = malloc(sizeof(struct node));
+    struct node *ast = tgc_alloc(calc_get_extra(yyscanner), sizeof(struct node));
     ast->op = op;
     ast->left = left;
     ast->right = right;
@@ -126,7 +132,7 @@ struct node *make_node(void *yyscanner, const char *op, struct node *left, struc
         int idx = get_function_idx((const char *)ast->left);
         if (idx != -1) {
             ast->op = "function identifier";
-            free(ast->left);
+            // free(ast->left);
             ast->left = (struct node *) fp[idx].name;
         }
     }
@@ -157,7 +163,7 @@ void free_ast_dfs(void *yyscanner, struct node *ast, khash_t(set) *walked) {
             ;
         } else if (streql(ast->op, "number") || streql(ast->op, "identifier") || streql(ast->op, "string")) {
             if (kh_get(set, walked, ast->left) == kh_end(walked)) {
-                free(ast->left);
+                // free(ast->left);
                 kh_val(walked, kh_put(set, walked, ast->left, &ret));
             }
 
@@ -172,7 +178,7 @@ void free_ast_dfs(void *yyscanner, struct node *ast, khash_t(set) *walked) {
         }
 
         if (kh_get(set, walked, ast) == kh_end(walked)) {
-            free(ast);
+            // free(ast);
             kh_val(walked, kh_put(set, walked, ast, &ret));
         }
 
@@ -364,20 +370,26 @@ void print_graphviz(struct node *ast) {
 }
 
 int main(void) {
+    char stk;
+    tgc_start(&gc, &stk);
+
     if (h == NULL) h = kh_init(var);
     printf("Simple calculator:\n");
 
     yyscan_t yyscanner;
     calc_lex_init(&yyscanner);
     calc_set_debug(AST_DEBUG, yyscanner);
-    calc_set_extra(0, yyscanner);
+    calc_set_extra(&gc, yyscanner);
+    
     for (;; fflush(stdin)) {
         calc_restart(stdin, yyscanner);
         calc_parse(yyscanner);
         if ((int)calc_get_extra(yyscanner) == 1) break;
     }
+    
     calc_lex_destroy(yyscanner);
     kh_destroy(var, h);
     getchar();
+    tgc_stop(&gc);
     return 0;
 }
